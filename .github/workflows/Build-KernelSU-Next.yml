@@ -17,18 +17,34 @@ jobs:
         sudo apt update
         sudo apt install git build-essential libssl-dev libelf-dev bison flex bc python3 cpio unzip wget curl -y
 
-    - name: Setup toolchain
+    - name: Download toolchains (64bit + 32bit)
       run: |
-        git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9
-        echo "PATH=$GITHUB_WORKSPACE/aarch64-linux-android-4.9/bin:$PATH" >> $GITHUB_ENV
-        echo "CROSS_COMPILE=aarch64-linux-android-" >> $GITHUB_ENV
+        # 64位主工具链
+        git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 gcc64
+        # 32位兼容工具链
+        git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 gcc32
+
+    - name: Setup build environment
+      run: |
+        echo "TOOLCHAIN_64=$GITHUB_WORKSPACE/gcc64" >> $GITHUB_ENV
+        echo "TOOLCHAIN_32=$GITHUB_WORKSPACE/gcc32" >> $GITHUB_ENV
+        echo "PATH=$GITHUB_WORKSPACE/gcc64/bin:$GITHUB_WORKSPACE/gcc32/bin:$PATH" >> $GITHUB_ENV
         echo "ARCH=arm64" >> $GITHUB_ENV
+        echo "CROSS_COMPILE=aarch64-linux-android-" >> $GITHUB_ENV
+        echo "CROSS_COMPILE_ARM32=arm-linux-androideabi-" >> $GITHUB_ENV
+
+    - name: Verify toolchain
+      run: |
+        echo "=== 验证64位编译器 ==="
+        aarch64-linux-android-gcc -v
+        echo "=== 验证32位编译器 ==="
+        arm-linux-androideabi-gcc -v
 
     - name: Clone kernel source
       run: |
         git clone --depth=1 -b lineage-17.1 https://github.com/LineageOS/android_kernel_oneplus_msm8998.git kernel
 
-    - name: Integrate KernelSU-Next (官方自动集成)
+    - name: Integrate KernelSU-Next
       run: |
         cd kernel
         curl -LSs https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh | bash -s next
