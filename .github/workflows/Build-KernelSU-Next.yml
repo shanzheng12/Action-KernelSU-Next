@@ -15,12 +15,12 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install git build-essential libssl-dev libelf-dev bison flex bc python3 cpio unzip wget -y
+        sudo apt install git build-essential libssl-dev libelf-dev bison flex bc python3 cpio unzip wget curl -y
 
     - name: Setup toolchain
       run: |
         git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9
-        echo "PATH=$PWD/aarch64-linux-android-4.9/bin:$PATH" >> $GITHUB_ENV
+        echo "PATH=$GITHUB_WORKSPACE/aarch64-linux-android-4.9/bin:$PATH" >> $GITHUB_ENV
         echo "CROSS_COMPILE=aarch64-linux-android-" >> $GITHUB_ENV
         echo "ARCH=arm64" >> $GITHUB_ENV
 
@@ -31,20 +31,24 @@ jobs:
     - name: Integrate KernelSU-Next
       run: |
         cd kernel
-        git clone https://github.com/rifsxd/KernelSU-Next.git KernelSU
-        echo "source \"KernelSU/Kconfig\"" >> Kconfig
-        echo "obj-\$(CONFIG_KSU) += KernelSU/" >> Makefile
+        git clone --depth=1 https://github.com/rifsxd/KernelSU-Next.git KernelSU
+        # 写入 Kconfig 和 Makefile，避免转义错误
+        echo 'source "KernelSU/Kconfig"' >> Kconfig
+        echo 'obj-$(CONFIG_KSU) += KernelSU/' >> Makefile
 
     - name: Build kernel
       run: |
         cd kernel
-        make lineageos_oneplus5t_defconfig
+        # 加载一加5T正确的Lineage配置
+        make lineage_dumpling_defconfig
+        # 开启KernelSU及调试依赖
         scripts/config --enable CONFIG_KSU
         scripts/config --enable CONFIG_KPROBES
         scripts/config --enable CONFIG_MODULES
         scripts/config --enable CONFIG_DEBUG_FS
         scripts/config --enable CONFIG_KALLSYMS
         make olddefconfig
+        # 全速编译
         make -j$(nproc)
 
     - name: Upload kernel artifact
