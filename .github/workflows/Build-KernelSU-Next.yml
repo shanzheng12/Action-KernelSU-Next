@@ -1,4 +1,4 @@
-name: Build KernelSU-Next for OnePlus 5T
+name: Build Kernel for OnePlus 5T (Base Test)
 
 on:
   workflow_dispatch:
@@ -24,23 +24,19 @@ jobs:
         echo "CROSS_COMPILE=aarch64-linux-android-" >> $GITHUB_ENV
         echo "ARCH=arm64" >> $GITHUB_ENV
 
-    - name: Clone kernel source (OnePlus 5T Android 10)
+    - name: Clone kernel source
       run: |
         git clone --depth=1 -b lineage-17.1 https://github.com/LineageOS/android_kernel_oneplus_msm8998.git kernel
 
-    - name: Auto integrate KernelSU-Next (官方脚本自动处理路径)
+    - name: List available defconfigs
       run: |
         cd kernel
-        curl -LSs https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh | bash -s next
+        echo "=== 所有一加相关配置文件 ==="
+        ls arch/arm64/configs/ | grep -E "oneplus|dumpling|cheeseburger|lineage|msm8998"
 
-    - name: Build kernel
-      run: |
-        cd kernel
-        make lineage_dumpling_defconfig
-        make -j$(nproc)
-
-    - name: Upload kernel artifact
+    - name: Upload config list
       uses: actions/upload-artifact@v4
+      if: always()
       with:
-        name: OnePlus5T-KernelSU-Next
-        path: kernel/arch/arm64/boot/Image.gz-dtb
+        name: defconfig-list
+        path: kernel/arch/arm64/configs/
